@@ -1,0 +1,102 @@
+:root {
+  /* Tonal Earth & Highland Soul Palette */
+  --primary: #85341f;
+  /* Terracotta */
+  --primary-container: #a44b34;
+  --secondary: #3b6934;
+  /* Deep Valley Green */
+  --secondary-container: #b9eeab;
+  --tertiary: #694700;
+  /* Gold/Yellow */
+  --tertiary-container: #ffdfb3;
+  --error: #ba1a1a;
+  /* Bolivian Red */
+  --error-container: #ffdad6;
+
+  --surface: #fcf9f4;
+  /* Fine Paper Foundation */
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f6f3ee;
+  --surface-container-high: #ebe8e3;
+  --surface-container-highest: #e5e2dd;
+  --surface-variant: #e5e2dd;
+  --surface-dim: #dcdad5;
+
+  --on-surface: #1c1c19;
+  --on-surface-variant: #55423e;
+  --on-primary: #ffffff;
+  --on-secondary: #ffffff;
+  --outline-variant: #dbc1ba;
+
+  --font-serif: 'Noto Serif', serif;
+  --font-sans: 'Manrope', sans-serif;
+
+  font-family: var(--font-sans);
+  color: var(--on-surface);
+  background-color: var(--surface);
+}
+
+body {
+  margin: 0;
+  background-color: var(--surface);
+  color: var(--on-surface);
+}
+
+h1,
+h2,
+h3,
+h4,
+.font-headline {
+  font-family: var(--font-serif);
+  color: var(--on-surface);
+  font-weight: 700;
+}
+
+h1 {
+  font-size: 3.5rem;
+  letter-spacing: -0.03em;
+}
+
+h2 {
+  font-size: 2.5rem;
+  letter-spacing: -0.02em;
+}
+
+h3 {
+  font-size: 2rem;
+}
+
+p,
+.font-body {
+  font-family: var(--font-sans);
+  font-weight: 400;
+}
+
+.font-label {
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+
+/* Glassmorphism Rule */
+.glass-panel {
+  background: rgba(252, 249, 244, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Primary Gradient Rule */
+.bg-primary-gradient {
+  background: linear-gradient(135deg, var(--primary), var(--primary-container));
+}
+
+/* "No-Line" Rule - defined via tonal shifts in components */
+
+/* Ghost Border Fallback */
+.ghost-border {
+  border: 1px solid rgba(219, 193, 186, 0.15);
+}
+
+/* Global Transitions */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
+}

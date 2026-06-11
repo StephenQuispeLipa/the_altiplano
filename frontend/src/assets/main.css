@@ -1,0 +1,53 @@
+:root {
+  --primary: #85341f;
+  --primary-container: #a44b34;
+  --on-primary: #ffffff;
+
+  --secondary: #3b6934;
+  --on-secondary: #ffffff;
+
+  --surface: #fcf9f4;
+  --on-surface: #1c1c19;
+  --on-surface-variant: #53433f;
+
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f6f3ee;
+  --surface-container: #f1ede8;
+  --surface-container-high: #ebe8e3;
+  --surface-container-highest: #e5e2db;
+
+  --outline-variant: rgba(219, 193, 186, 0.15);
+
+  --font-display: 'Noto Serif', serif;
+  --font-body: 'Manrope', sans-serif;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  background-color: var(--surface);
+  color: var(--on-surface);
+  -webkit-font-smoothing: antialiased;
+}
+
+#app,
+.v-application {
+  height: 100%;
+  min-height: 100vh;
+}
+
+#app {
+  overflow: hidden;
+}
+
+h1,
+h2,
+h3,
+h4,
+.font-display {
+  font-family: var(--font-display);
+}

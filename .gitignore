@@ -1,0 +1,106 @@
+# =========================
+# Dependencias
+# =========================
+node_modules/
+
+# =========================
+# Builds y artefactos compilados
+# =========================
+dist/
+dist-ssr/
+build/
+*.tsbuildinfo
+
+# NestJS
+.nest/
+
+# Vite
+.vite/
+
+# =========================
+# Variables de entorno y secretos
+# (mantener .env.example en el repo)
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =========================
+# Tests y cobertura
+# =========================
+coverage/
+.nyc_output/
+*.lcov
+
+# =========================
+# Caché y temporales
+# =========================
+.cache/
+.temp/
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+*~
+
+# =========================
+# Editores e IDEs
+# =========================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# =========================
+# Sistema operativo
+# =========================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# =========================
+# Runtime / misc
+# =========================
+*.local
+*.pid
+*.seed
+*.pid.lock
+
+# Certificados y claves locales
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Base de datos local (si se usa SQLite u otros dumps)
+*.sqlite
+*.sqlite3
+*.db
+*.sql.gz
+*.dump

@@ -13,3 +13,9 @@ export function getOrderStatusColor(status) {
 export function getOrderStatusIcon(status) {
   return ORDER_STATUSES.find((s) => s.value === status)?.icon ?? 'mdi-circle-medium';
 }
+
+const CLIENT_CANCELLABLE_STATUSES = ['En reserva', 'En preparación', 'Atrasado'];
+
+export function canClientCancelOrder(status) {
+  return CLIENT_CANCELLABLE_STATUSES.includes(status);
+}

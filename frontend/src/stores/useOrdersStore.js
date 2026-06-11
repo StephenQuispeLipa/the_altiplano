@@ -95,6 +95,13 @@ export const useOrdersStore = defineStore('orders', () => {
     if (idx !== -1) orders.value.splice(idx, 1);
   }
 
+  async function cancelOrder(orderId) {
+    const updated = await ordersApi.cancelOrder(orderId);
+    const idx = orders.value.findIndex((o) => o.id === orderId);
+    if (idx !== -1) orders.value[idx] = updated;
+    return updated;
+  }
+
   return {
     orders,
     loading,
@@ -107,5 +114,6 @@ export const useOrdersStore = defineStore('orders', () => {
     updateOrderStatus,
     updateOrderPaid,
     deleteOrder,
+    cancelOrder,
   };
 });

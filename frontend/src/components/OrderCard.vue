@@ -7,6 +7,10 @@
           <div class="text-caption font-weight-bold text-on-surface-variant uppercase tracking-widest mb-1">Orden de
             Pedido</div>
           <h2 class="font-headline text-h5 font-weight-bold text-primary">#{{ order.id }}</h2>
+          <div v-if="orderTime" class="order-card__time text-[10px] text-on-surface-variant font-body mt-1">
+            <v-icon size="12" class="mr-1 opacity-70">mdi-clock-outline</v-icon>
+            {{ orderTime }}
+          </div>
         </div>
         <div class="order-card__chips">
           <v-chip variant="flat" :color="statusChipColor" size="small"
@@ -155,6 +159,14 @@ const onBehalfOfInitials = computed(() => {
 });
 
 const statusChipColor = computed(() => getOrderStatusColor(props.order.status));
+
+const orderTime = computed(() => {
+  if (!props.order.createdAt) return '';
+  return new Date(props.order.createdAt).toLocaleString('es-BO', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+});
 
 async function confirmDelete() {
   try {

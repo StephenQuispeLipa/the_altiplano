@@ -166,6 +166,7 @@ import {
   confirmPasswordRule,
 } from '../utils/validationRules';
 import { isPasswordAcceptable } from '../utils/passwordStrength';
+import { isCaptchaRelatedError } from '../utils/authErrors';
 import CaptchaField from '../components/auth/CaptchaField.vue';
 import PasswordStrengthField from '../components/auth/PasswordStrengthField.vue';
 import illimaniImg from '../assets/illimani.jpg';
@@ -199,7 +200,8 @@ const handleRegister = async () => {
 
   if (result.success) {
     router.push({ path: '/login', query: { registered: '1' } });
-  } else {
+  } else if (isCaptchaRelatedError(result.message)) {
+    captchaRef.value?.setServerError(result.message);
     captchaRef.value?.loadCaptcha();
   }
 };

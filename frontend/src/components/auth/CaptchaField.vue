@@ -1,8 +1,9 @@
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useCaptcha } from '../../composables/useCaptcha';
 
 const { captchaId, captchaText, answer, loading, error, loadCaptcha } = useCaptcha();
+const serverError = ref('');
 
 defineExpose({
   get captchaId() {
@@ -12,11 +13,22 @@ defineExpose({
     return answer.value;
   },
   loadCaptcha,
+  clearServerError() {
+    serverError.value = '';
+  },
+  setServerError(message) {
+    serverError.value = message ?? '';
+  },
 });
 
 const captchaChars = computed(() => captchaText.value.split(''));
 
-onMounted(loadCaptcha);
+async function refreshCaptcha() {
+  serverError.value = '';
+  await loadCaptcha();
+}
+
+onMounted(refreshCaptcha);
 </script>
 
 <template>
@@ -47,7 +59,7 @@ onMounted(loadCaptcha);
         size="small"
         :loading="loading"
         aria-label="Refrescar CAPTCHA"
-        @click="loadCaptcha"
+        @click="refreshCaptcha"
       />
     </div>
     <v-text-field
@@ -62,9 +74,10 @@ onMounted(loadCaptcha);
       density="comfortable"
       class="custom-input rounded-lg"
       hide-details="auto"
+      :error-messages="serverError || undefined"
       :rules="[(v) => !!v?.toString().trim() || 'Ingresa el texto del CAPTCHA.']"
     />
-    <p v-if="error" class="text-error text-caption mt-1">{{ error }}</p>
+    <p v-if="error && !serverError" class="text-error text-caption mt-1">{{ error }}</p>
   </div>
 </template>
 

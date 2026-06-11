@@ -130,12 +130,13 @@
       </v-col>
       <v-col cols="12" lg="4">
         <v-card variant="flat" color="primary" class="rounded-xl pa-0 h-100 overflow-hidden d-flex flex-column text-white">
-          <div class="h-40 relative" v-if="starDish">
-            <v-img :src="starDish.image" cover class="h-100" />
-            <div class="absolute inset-0 bg-gradient-to-t-overlay" />
-            <div class="absolute bottom-4 left-6">
-              <v-chip color="tertiary" size="x-small" variant="flat" class="font-weight-bold text-uppercase">Plato estrella</v-chip>
-            </div>
+          <div v-if="starDish" class="star-dish-image-wrap">
+            <CroppedImage :src="starDish.image" ratio="16/9">
+              <div class="star-dish-overlay" />
+              <div class="star-dish-chip-wrap">
+                <v-chip color="tertiary" size="x-small" variant="flat" class="font-weight-bold text-uppercase">Plato estrella</v-chip>
+              </div>
+            </CroppedImage>
           </div>
           <div class="pa-6 flex-grow-1">
             <h6 class="font-headline text-h5 font-weight-bold">{{ starDish?.name ?? 'Sin datos' }}</h6>
@@ -357,6 +358,7 @@ import { useAnalyticsMetrics } from '../../composables/useAnalyticsMetrics';
 import { useHorizontalScroll } from '../../composables/useHorizontalScroll';
 import { getCategoryLabel } from '../../constants/dishCategories';
 import { exportReportPdf } from '../../utils/exportReportPdf';
+import CroppedImage from '../../components/common/CroppedImage.vue';
 
 const periodOptions = [
   { label: 'Últimos 7 días', value: 7 },
@@ -566,5 +568,16 @@ function handleExport() {
   border-radius: 10px;
 }
 
-.h-40 { height: 10rem; }
+.star-dish-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent 60%);
+  pointer-events: none;
+}
+
+.star-dish-chip-wrap {
+  position: absolute;
+  bottom: 16px;
+  left: 24px;
+}
 </style>

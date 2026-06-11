@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Dish } from './entities/dish.entity';
 import { CreateDishDto, UpdateDishDto, DishResponseDto } from './dto/dish.dto';
 import { ComboSlotDish } from '../combos/entities/combo-slot-dish.entity';
+import { OrderItem } from '../orders/entities/order-item.entity';
 
 @Injectable()
 export class DishesService {
@@ -16,6 +17,8 @@ export class DishesService {
     @InjectRepository(Dish) private readonly dishRepo: Repository<Dish>,
     @InjectRepository(ComboSlotDish)
     private readonly comboSlotDishRepo: Repository<ComboSlotDish>,
+    @InjectRepository(OrderItem)
+    private readonly orderItemRepo: Repository<OrderItem>,
   ) {}
 
   toResponse(dish: Dish): DishResponseDto {
@@ -62,10 +65,18 @@ export class DishesService {
   }
 
   async remove(id: string): Promise<void> {
-    const referenced = await this.comboSlotDishRepo.count({ where: { dishId: id } });
-    if (referenced > 0) {
+    const inCombos = await this.comboSlotDishRepo.count({ where: { dishId: id } });
+    if (inCombos > 0) {
       throw new BadRequestException('El platillo está referenciado en combos');
     }
+
+    const inOrders = await this.orderItemRepo.count({ where: { dishId: id } });
+    if (inOrders > 0) {
+      throw new BadRequestException(
+        'No se puede eliminar: el platillo tiene pedidos registrados',
+      );
+    }
+
     const result = await this.dishRepo.delete(id);
     if (result.affected === 0) throw new NotFoundException('Platillo no encontrado');
   }

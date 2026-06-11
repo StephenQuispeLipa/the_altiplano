@@ -32,7 +32,7 @@
 
             <v-avatar color="primary-container" size="32">
 
-              <v-img :src="userAvatar" />
+              <v-img :src="userAvatar" cover />
 
             </v-avatar>
 

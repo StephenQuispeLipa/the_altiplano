@@ -19,9 +19,39 @@
       </v-col>
     </v-row>
 
+    <v-row class="mb-6">
+      <v-col cols="12" md="5">
+        <v-text-field
+          v-model="searchQuery"
+          prepend-inner-icon="mdi-magnify"
+          label="Buscar por nombre"
+          variant="outlined"
+          density="compact"
+          rounded="lg"
+          hide-details
+          clearable
+        />
+      </v-col>
+      <v-col cols="12" md="7">
+        <div class="d-flex flex-wrap align-center gap-2">
+          <v-btn
+            v-for="cat in categoryFilters"
+            :key="cat"
+            :variant="activeCategory === cat ? 'flat' : 'text'"
+            :color="activeCategory === cat ? 'primary' : 'on-surface-variant'"
+            :class="['rounded-pill font-weight-bold px-5', activeCategory !== cat ? 'bg-surface-container-low' : '']"
+            size="small"
+            @click="activeCategory = cat"
+          >
+            {{ cat }}
+          </v-btn>
+        </div>
+      </v-col>
+    </v-row>
+
     <v-row>
       <v-col
-        v-for="dish in dishesStore.dishes"
+        v-for="dish in filteredDishes"
         :key="dish.id"
         cols="6"
         lg="2"
@@ -31,21 +61,16 @@
           color="surface-container-low"
           class="rounded-xl overflow-hidden platillo-card h-100 d-flex flex-column"
         >
-          <div class="relative h-36">
-            <v-img
-              :src="dish.image || placeholder"
-              cover
-              class="h-100"
-            />
+          <CroppedImage :src="dish.image" :placeholder="placeholder">
             <v-chip
               color="secondary"
               size="x-small"
               variant="flat"
-              class="absolute top-3 right-3 font-weight-bold text-uppercase"
+              class="platillo-card-chip font-weight-bold text-uppercase"
             >
               {{ getCategoryLabel(dish.type) }}
             </v-chip>
-          </div>
+          </CroppedImage>
           <v-card-text class="pa-4 flex-grow-1 d-flex flex-column">
             <h4 class="font-headline text-subtitle-1 font-weight-bold line-clamp-2 mb-2">{{ dish.name }}</h4>
             <div class="mb-4">
@@ -78,6 +103,10 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <p v-if="filteredDishes.length === 0" class="text-center text-on-surface-variant opacity-70 py-12">
+      {{ hasActiveFilters ? 'No hay platillos que coincidan con tu búsqueda.' : 'No hay platillos en el catálogo.' }}
+    </p>
 
     <PlatilloFormDialog
       v-model="formDialogOpen"
@@ -115,19 +144,39 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useDishesStore } from '../../stores/useDishesStore';
 import { useMenuStore } from '../../stores/useMenuStore';
 import { useComboStore } from '../../stores/useComboStore';
-import { getCategoryLabel } from '../../constants/dishCategories';
+import { DISH_CATEGORIES, getCategoryLabel, getCategoryType } from '../../constants/dishCategories';
 import { todayISO } from '../../utils/menuDate';
 import PlatilloFormDialog from '../../components/admin/PlatilloFormDialog.vue';
+import CroppedImage from '../../components/common/CroppedImage.vue';
 import silpanchoImg from '../../assets/silpancho.jpg';
 
+const ALL_CATEGORY = 'Todos';
 const dishesStore = useDishesStore();
 const menuStore = useMenuStore();
 const comboStore = useComboStore();
 const placeholder = silpanchoImg;
+
+const searchQuery = ref('');
+const activeCategory = ref(ALL_CATEGORY);
+const categoryFilters = [ALL_CATEGORY, ...DISH_CATEGORIES.map(c => c.label)];
+
+const filteredDishes = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase();
+  const type = activeCategory.value === ALL_CATEGORY ? null : getCategoryType(activeCategory.value);
+  return dishesStore.dishes.filter(dish => {
+    if (type && dish.type !== type) return false;
+    if (query && !dish.name.toLowerCase().includes(query)) return false;
+    return true;
+  });
+});
+
+const hasActiveFilters = computed(() =>
+  searchQuery.value.trim().length > 0 || activeCategory.value !== ALL_CATEGORY,
+);
 
 const formDialogOpen = ref(false);
 const editingDish = ref(null);
@@ -189,6 +238,11 @@ async function handleDelete() {
     deleteDialog.value.show = false;
     return;
   }
+  if ((dish.total_orders_history ?? 0) > 0) {
+    showSnackbar('No se puede eliminar: el platillo tiene pedidos registrados.', 'error');
+    deleteDialog.value.show = false;
+    return;
+  }
 
   try {
     await dishesStore.deleteDish(dish.id);
@@ -224,5 +278,11 @@ async function handleDelete() {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.platillo-card-chip {
+  position: absolute;
+  top: 12px;
+  right: 12px;
 }
 </style>

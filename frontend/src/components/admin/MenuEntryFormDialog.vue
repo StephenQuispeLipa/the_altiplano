@@ -9,6 +9,16 @@
       </div>
 
       <v-card-text class="pa-6">
+        <v-alert
+          v-if="!isEdit && availableDishes.length === 0"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="rounded-xl mb-4"
+        >
+          Todos los platillos ya están en el menú de esta fecha.
+        </v-alert>
+
         <v-autocomplete
           v-if="!isEdit"
           v-model="form.dishId"
@@ -19,11 +29,12 @@
           prepend-inner-icon="mdi-magnify"
           variant="outlined"
           rounded="lg"
+          :disabled="availableDishes.length === 0"
           :error-messages="dishError"
           class="mb-4"
         >
           <template #item="{ props: itemProps, item }">
-            <v-list-item v-bind="itemProps" :subtitle="getCategoryLabel(item.raw.type)" />
+            <v-list-item v-bind="itemProps" :subtitle="getCategoryLabel(item?.type)" />
           </template>
         </v-autocomplete>
 
@@ -42,6 +53,7 @@
           label="Precio (Bs)"
           type="number"
           min="0"
+          step="0.01"
           variant="outlined"
           rounded="lg"
           :error-messages="priceError"
@@ -53,6 +65,7 @@
           label="Stock disponible"
           type="number"
           min="0"
+          step="1"
           variant="outlined"
           rounded="lg"
           :error-messages="stockError"
@@ -62,9 +75,16 @@
       <v-divider class="opacity-10" />
 
       <v-card-actions class="pa-6">
-        <v-btn variant="text" class="rounded-xl font-weight-bold" @click="close">Cancelar</v-btn>
+        <v-btn variant="text" class="rounded-xl font-weight-bold" :disabled="saving" @click="close">Cancelar</v-btn>
         <v-spacer />
-        <v-btn color="primary" variant="flat" class="rounded-xl font-weight-bold px-8" @click="save">
+        <v-btn
+          color="primary"
+          variant="flat"
+          class="rounded-xl font-weight-bold px-8"
+          :loading="saving"
+          :disabled="saving || (!isEdit && availableDishes.length === 0)"
+          @click="save"
+        >
           {{ isEdit ? 'Guardar' : 'Agregar' }}
         </v-btn>
       </v-card-actions>
@@ -83,6 +103,7 @@ const props = defineProps({
   modelValue: { type: Boolean, default: false },
   entry: { type: Object, default: null },
   selectedDate: { type: String, required: true },
+  saving: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue', 'save']);
@@ -90,7 +111,7 @@ const emit = defineEmits(['update:modelValue', 'save']);
 const dishesStore = useDishesStore();
 const menuStore = useMenuStore();
 
-const form = ref({ dishId: null, price: 0, stock: 0 });
+const form = ref({ dishId: null, price: null, stock: null });
 const dishError = ref('');
 const priceError = ref('');
 const stockError = ref('');
@@ -113,7 +134,7 @@ watch(() => props.modelValue, (open) => {
         stock: props.entry.stock,
       };
     } else {
-      form.value = { dishId: null, price: 0, stock: 0 };
+      form.value = { dishId: null, price: null, stock: null };
     }
     dishError.value = '';
     priceError.value = '';
@@ -123,24 +144,32 @@ watch(() => props.modelValue, (open) => {
 
 function validate() {
   let valid = true;
+
   if (!isEdit.value && !form.value.dishId) {
-    dishError.value = 'Selecciona un platillo.';
+    dishError.value = availableDishes.value.length === 0
+      ? 'No hay platillos disponibles para agregar.'
+      : 'Selecciona un platillo.';
     valid = false;
   } else {
     dishError.value = '';
   }
-  if (form.value.price === '' || form.value.price < 0) {
-    priceError.value = 'Ingresa un precio válido.';
+
+  const price = form.value.price;
+  if (!Number.isFinite(price) || price <= 0) {
+    priceError.value = 'Ingresa un precio mayor a 0.';
     valid = false;
   } else {
     priceError.value = '';
   }
-  if (form.value.stock === '' || form.value.stock < 0) {
-    stockError.value = 'Ingresa un stock válido.';
+
+  const stock = form.value.stock;
+  if (!Number.isFinite(stock) || stock < 0 || !Number.isInteger(stock)) {
+    stockError.value = 'Ingresa un stock válido (número entero ≥ 0).';
     valid = false;
   } else {
     stockError.value = '';
   }
+
   return valid;
 }
 

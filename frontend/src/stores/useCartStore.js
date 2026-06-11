@@ -113,10 +113,13 @@ export const useCartStore = defineStore('cart', () => {
             const combo = comboStore.getComboById(line.comboId);
             if (!combo) return null;
 
-            const selectionNames = Object.entries(line.selections).map(([slotId, dishId]) => {
-                const dish = dishesStore.getById(dishId);
-                const slot = combo.slots.find(s => s.id === slotId);
-                return { slotLabel: slot?.label, dishName: dish?.name, dishId };
+            const selectionNames = combo.slots.map(slot => {
+                const dishId = line.selections[slot.id];
+                if (dishId) {
+                    const dish = dishesStore.getById(dishId);
+                    return { slotLabel: slot.label, dishName: dish?.name ?? 'Desconocido', dishId };
+                }
+                return { slotLabel: slot.label, dishName: null, dishId: null, pending: true };
             });
 
             return {

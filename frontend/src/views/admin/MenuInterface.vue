@@ -25,6 +25,17 @@
                         {{ cat }}
                     </v-btn>
                 </div>
+                <v-text-field
+                    v-model="searchQuery"
+                    prepend-inner-icon="mdi-magnify"
+                    label="Buscar por nombre"
+                    variant="outlined"
+                    density="compact"
+                    rounded="lg"
+                    hide-details
+                    clearable
+                    class="mt-4 menu-search-field"
+                />
             </v-col>
             <v-col cols="12" lg="4" class="text-lg-right">
                 <v-btn
@@ -83,14 +94,12 @@
                 <v-col v-for="item in filteredMenu" :key="item.id" cols="12" sm="6" md="4" lg="3">
                     <v-card variant="flat" color="surface-container-low"
                         class="rounded-xl overflow-hidden menu-card h-100 d-flex flex-column">
-                        <div class="relative h-48">
-                            <v-img :src="item.image || placeholder" cover
-                                class="h-100 transition-transform"></v-img>
+                        <CroppedImage :src="item.image" :placeholder="placeholder" img-class="menu-card-image">
                             <v-chip v-if="item.type" color="secondary" size="x-small" variant="flat"
-                                class="absolute top-4 right-4 font-weight-bold tracking-widest text-uppercase opacity-80">
+                                class="menu-card-chip font-weight-bold tracking-widest text-uppercase opacity-80">
                                 {{ getCategoryLabel(item.type) }}
                             </v-chip>
-                        </div>
+                        </CroppedImage>
                         <v-card-text class="pa-6 flex-grow-1 d-flex flex-column">
                             <div class="d-flex justify-space-between align-start mb-2">
                                 <h4 class="font-headline text-h6 font-weight-bold line-clamp-1">{{ item.name }}</h4>
@@ -127,19 +136,17 @@
                 </v-col>
             </v-row>
             <p v-if="filteredMenu.length === 0" class="text-center text-on-surface-variant opacity-70 py-12">
-                No hay platillos en el menú para esta categoría.
+                {{ hasActiveMenuFilters ? 'No hay platillos que coincidan con tu búsqueda.' : 'No hay platillos en el menú para esta categoría.' }}
             </p>
         </div>
 
         <!-- Combos -->
         <div v-else class="mb-16">
             <v-row>
-                <v-col v-for="combo in comboStore.combos" :key="combo.id" cols="12" sm="6" md="4" lg="3">
+                <v-col v-for="combo in filteredCombos" :key="combo.id" cols="12" sm="6" md="4" lg="3">
                     <v-card variant="flat" color="surface-container-low"
                         class="rounded-xl overflow-hidden menu-card h-100 d-flex flex-column">
-                        <div class="relative h-48">
-                            <v-img :src="combo.image || placeholder" cover class="h-100"></v-img>
-                        </div>
+                        <CroppedImage :src="combo.image" :placeholder="placeholder" />
                         <v-card-text class="pa-6 flex-grow-1 d-flex flex-column">
                             <div class="d-flex justify-space-between align-start mb-2">
                                 <h4 class="font-headline text-h6 font-weight-bold line-clamp-1">{{ combo.name }}</h4>
@@ -169,12 +176,16 @@
                     </v-card>
                 </v-col>
             </v-row>
+            <p v-if="filteredCombos.length === 0" class="text-center text-on-surface-variant opacity-70 py-12">
+                {{ hasActiveMenuFilters ? 'No hay combos que coincidan con tu búsqueda.' : 'No hay combos registrados.' }}
+            </p>
         </div>
 
         <MenuEntryFormDialog
             v-model="entryDialogOpen"
             :entry="editingEntry"
             :selected-date="selectedDate"
+            :saving="entrySaving"
             @save="handleEntrySave"
         />
 
@@ -245,6 +256,7 @@ import {
 import { todayISO, isToday } from '../../utils/menuDate'
 import MenuEntryFormDialog from '../../components/admin/MenuEntryFormDialog.vue'
 import ComboFormDialog from '../../components/admin/ComboFormDialog.vue'
+import CroppedImage from '../../components/common/CroppedImage.vue'
 import silpanchoImg from '../../assets/silpancho.jpg'
 
 const menuStore = useMenuStore()
@@ -255,9 +267,11 @@ const selectedDate = ref(todayISO())
 const selectedDatePicker = ref(new Date())
 const dateMenuOpen = ref(false)
 const activeCategory = ref(ALL_MENU_TAB)
+const searchQuery = ref('')
 const categories = [ALL_MENU_TAB, ...DISH_CATEGORIES.map(c => c.label), COMBOS_TAB]
 
 const entryDialogOpen = ref(false)
+const entrySaving = ref(false)
 const editingEntry = ref(null)
 const comboDialogOpen = ref(false)
 const editingCombo = ref(null)
@@ -272,12 +286,23 @@ const menuItems = computed(() => menuStore.getEnrichedMenu(selectedDate.value))
 
 const filteredMenu = computed(() => {
     const type = getCategoryType(activeCategory.value)
-    if (!type) return menuItems.value
-    return menuItems.value.filter(item => item.type === type)
+    const query = searchQuery.value.trim().toLowerCase()
+    let items = menuItems.value
+    if (type) items = items.filter(item => item.type === type)
+    if (query) items = items.filter(item => item.name.toLowerCase().includes(query))
+    return items
 })
 
+const filteredCombos = computed(() => {
+    const query = searchQuery.value.trim().toLowerCase()
+    if (!query) return comboStore.combos
+    return comboStore.combos.filter(combo => combo.name.toLowerCase().includes(query))
+})
+
+const hasActiveMenuFilters = computed(() => searchQuery.value.trim().length > 0)
+
 const sectionCountLabel = computed(() => {
-    if (isCombosTab.value) return `${comboStore.combos.length} Combos`
+    if (isCombosTab.value) return `${filteredCombos.value.length} Combos`
     return `${filteredMenu.value.length} Platos`
 })
 
@@ -316,29 +341,34 @@ watch(selectedDate, (date) => {
 }, { immediate: true });
 
 async function handleEntrySave(payload) {
-    if (payload.entryId) {
-        const result = await menuStore.updateEntry(selectedDate.value, payload.entryId, {
-            price: payload.price,
-            stock: payload.stock,
-        })
-        if (!result.ok) {
-            showSnackbar(result.error, 'error')
-            return
+    entrySaving.value = true
+    try {
+        if (payload.entryId) {
+            const result = await menuStore.updateEntry(selectedDate.value, payload.entryId, {
+                price: payload.price,
+                stock: payload.stock,
+            })
+            if (!result.ok) {
+                showSnackbar(result.error, 'error')
+                return
+            }
+            showSnackbar('Entrada actualizada.')
+        } else {
+            const result = await menuStore.addEntry(selectedDate.value, {
+                dishId: payload.dishId,
+                price: payload.price,
+                stock: payload.stock,
+            })
+            if (!result.ok) {
+                showSnackbar(result.error, 'error')
+                return
+            }
+            showSnackbar('Platillo agregado al menú.')
         }
-        showSnackbar('Entrada actualizada.')
-    } else {
-        const result = await menuStore.addEntry(selectedDate.value, {
-            dishId: payload.dishId,
-            price: payload.price,
-            stock: payload.stock,
-        })
-        if (!result.ok) {
-            showSnackbar(result.error, 'error')
-            return
-        }
-        showSnackbar('Platillo agregado al menú.')
+        entryDialogOpen.value = false
+    } finally {
+        entrySaving.value = false
     }
-    entryDialogOpen.value = false
 }
 
 function confirmRemoveEntry(item) {
@@ -425,8 +455,22 @@ async function handleDeleteCombo() {
     transform: translateY(-4px);
 }
 
-.menu-card:hover .v-img {
+.menu-card:hover .menu-card-image {
     transform: scale(1.1);
+}
+
+.menu-card-image {
+    transition: transform 0.3s ease;
+}
+
+.menu-card-chip {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+}
+
+.menu-search-field {
+    max-width: 360px;
 }
 
 .line-clamp-1 {

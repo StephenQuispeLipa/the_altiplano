@@ -80,7 +80,7 @@
 
                 <span v-for="(sel, i) in item.selectionNames" :key="i">
 
-                  {{ sel.slotLabel }}: {{ sel.dishName }}<span v-if="i < item.selectionNames.length - 1"> · </span>
+                  {{ sel.slotLabel }}: {{ sel.pending ? 'Pendiente' : sel.dishName }}<span v-if="i < item.selectionNames.length - 1"> · </span>
 
                 </span>
 

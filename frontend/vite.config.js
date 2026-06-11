@@ -8,6 +8,14 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
+            const clientIp = req.socket?.remoteAddress;
+            if (clientIp) {
+              proxyReq.setHeader('X-Forwarded-For', clientIp);
+            }
+          });
+        },
       },
     },
   },

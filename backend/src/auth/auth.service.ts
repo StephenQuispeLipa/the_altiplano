@@ -55,6 +55,8 @@ export class AuthService {
       meta,
     });
 
+    await this.captchaService.consume(dto.captchaId);
+
     return result;
   }
 
@@ -77,6 +79,8 @@ export class AuthService {
       email: dto.email.trim().toLowerCase(),
       passwordHash: await bcrypt.hash(dto.password, 10),
     });
+
+    await this.captchaService.consume(dto.captchaId);
 
     return {
       message: 'Registro exitoso. Ya puedes iniciar sesión.',

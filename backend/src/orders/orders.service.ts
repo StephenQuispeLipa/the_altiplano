@@ -5,13 +5,14 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, Between, FindOptionsWhere } from 'typeorm';
+import { Repository, DataSource, Between, FindOptionsWhere, EntityManager } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { MenuEntry } from '../menu/entities/menu-entry.entity';
 import { Dish } from '../dishes/entities/dish.entity';
 import { Combo } from '../combos/entities/combo.entity';
+import { ComboSlot } from '../combos/entities/combo-slot.entity';
 import { Client } from '../clients/entities/client.entity';
 import { Staff } from '../staff/entities/staff.entity';
 import { OrderStatus } from '../common/enums/order-status.enum';
@@ -42,6 +43,54 @@ export class OrdersService {
   private todayISO(): string {
     return new Date().toISOString().slice(0, 10);
   }
+
+  private async applyMenuStockDelta(
+    manager: EntityManager,
+    dishId: string,
+    qty: number,
+    today: string,
+  ): Promise<void> {
+    const menuEntry = await manager.findOne(MenuEntry, {
+      where: { menuDate: today, dishId },
+      relations: { dish: true },
+    });
+    if (!menuEntry?.dish) {
+      throw new BadRequestException(`Platillo ${dishId} no disponible en menú`);
+    }
+
+    menuEntry.stock -= qty;
+    menuEntry.soldToday += qty;
+    await manager.save(menuEntry);
+
+    menuEntry.dish.totalOrdersHistory += qty;
+    await manager.save(menuEntry.dish);
+  }
+
+  private async restoreMenuStockDelta(
+    manager: EntityManager,
+    dishId: string,
+    qty: number,
+    menuDate: string,
+  ): Promise<void> {
+    const menuEntry = await manager.findOne(MenuEntry, {
+      where: { menuDate, dishId },
+      relations: { dish: true },
+    });
+    if (!menuEntry?.dish) return;
+
+    menuEntry.stock += qty;
+    menuEntry.soldToday = Math.max(0, menuEntry.soldToday - qty);
+    await manager.save(menuEntry);
+
+    menuEntry.dish.totalOrdersHistory = Math.max(0, menuEntry.dish.totalOrdersHistory - qty);
+    await manager.save(menuEntry.dish);
+  }
+
+  private readonly clientCancellableStatuses: OrderStatus[] = [
+    OrderStatus.EnReserva,
+    OrderStatus.EnPreparacion,
+    OrderStatus.Atrasado,
+  ];
 
   toResponse(order: Order, items: OrderItem[]): OrderResponseDto {
     return {
@@ -167,11 +216,7 @@ export class OrdersService {
             quantity: line.quantity,
           });
 
-          menuEntry.stock -= line.quantity;
-          menuEntry.soldToday += line.quantity;
-          await manager.save(menuEntry);
-          dish.totalOrdersHistory += line.quantity;
-          await manager.save(dish);
+          await this.applyMenuStockDelta(manager, line.dishId, line.quantity, today);
         } else if (line.type === 'combo' && line.comboId) {
           const combo = await manager.findOne(Combo, { where: { id: line.comboId } });
           if (!combo) throw new BadRequestException('Combo no encontrado');
@@ -188,8 +233,15 @@ export class OrdersService {
             quantity: line.quantity,
           });
 
-          if (line.selections) {
-            for (const dishId of Object.values(line.selections)) {
+          const slots = await manager.find(ComboSlot, {
+            where: { comboId: line.comboId },
+            order: { slotKey: 'ASC' },
+          });
+          const selections = line.selections ?? {};
+
+          for (const slot of slots) {
+            const dishId = selections[slot.id];
+            if (dishId) {
               const dish = await manager.findOne(Dish, { where: { id: dishId } });
               if (dish) {
                 orderItems.push({
@@ -201,7 +253,28 @@ export class OrdersService {
                   type: dish.type,
                   quantity: line.quantity,
                 });
+                await this.applyMenuStockDelta(manager, dishId, line.quantity, today);
+              } else {
+                orderItems.push({
+                  id: uuidv4(),
+                  dishId: null,
+                  comboId: null,
+                  name: `Pendiente: ${slot.label}`,
+                  price: 0,
+                  type: 'Pendiente',
+                  quantity: line.quantity,
+                });
               }
+            } else {
+              orderItems.push({
+                id: uuidv4(),
+                dishId: null,
+                comboId: null,
+                name: `Pendiente: ${slot.label}`,
+                price: 0,
+                type: 'Pendiente',
+                quantity: line.quantity,
+              });
             }
           }
         }
@@ -247,6 +320,45 @@ export class OrdersService {
     await this.orderRepo.save(order);
     const items = await this.orderItemRepo.find({ where: { orderId: id } });
     return this.toResponse(order, items);
+  }
+
+  async cancelByClient(id: string, user: JwtPayload): Promise<OrderResponseDto> {
+    if (user.role !== AppRole.Cliente) {
+      throw new ForbiddenException('Solo el cliente puede cancelar su pedido.');
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const order = await manager.findOne(Order, { where: { id } });
+      if (!order) throw new NotFoundException('Pedido no encontrado');
+      if (order.clientId !== user.sub) {
+        throw new ForbiddenException('No puedes cancelar este pedido.');
+      }
+      if (order.status === OrderStatus.Cancelado) {
+        throw new BadRequestException('El pedido ya está cancelado.');
+      }
+      if (!this.clientCancellableStatuses.includes(order.status)) {
+        throw new BadRequestException('Este pedido ya no puede cancelarse.');
+      }
+
+      const items = await manager.find(OrderItem, { where: { orderId: id } });
+      const menuDate = order.createdAt.toISOString().slice(0, 10);
+      const dishQty: Record<string, number> = {};
+
+      for (const item of items) {
+        if (item.dishId && item.type !== 'Pendiente') {
+          dishQty[item.dishId] = (dishQty[item.dishId] ?? 0) + item.quantity;
+        }
+      }
+
+      for (const [dishId, qty] of Object.entries(dishQty)) {
+        await this.restoreMenuStockDelta(manager, dishId, qty, menuDate);
+      }
+
+      order.status = OrderStatus.Cancelado;
+      await manager.save(order);
+
+      return this.toResponse(order, items);
+    });
   }
 
   async updatePaid(id: string, dto: UpdateOrderPaidDto): Promise<OrderResponseDto> {

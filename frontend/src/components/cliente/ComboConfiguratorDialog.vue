@@ -13,9 +13,26 @@
       </div>
 
       <v-card-text class="combo-dialog__body pa-6">
+        <v-alert
+          v-if="hasPendingSlots"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="rounded-xl mb-6"
+          icon="mdi-alert-circle-outline"
+        >
+          Algunas opciones quedaron pendientes. Puedes agregar el combo igualmente.
+        </v-alert>
+
         <div v-for="slot in slotOptions" :key="slot.id" class="mb-8">
           <h4 class="font-headline text-subtitle-1 font-weight-bold mb-4">{{ slot.label }}</h4>
+
+          <p v-if="slot.dishes.length === 0" class="text-body-2 text-on-surface-variant mb-2">
+            Sin opciones disponibles hoy
+          </p>
+
           <v-radio-group
+            v-else
             v-model="selections[slot.id]"
             hide-details
             color="primary"
@@ -64,7 +81,7 @@
           color="primary"
           variant="flat"
           class="rounded-xl font-weight-bold px-8"
-          :disabled="!isValid"
+          :disabled="!combo"
           @click="confirm"
         >
           Agregar al pedido
@@ -109,13 +126,8 @@ const slotOptions = computed(() => {
   }));
 });
 
-const isValid = computed(() =>
-  slotOptions.value.every(slot => {
-    const selectedId = selections.value[slot.id];
-    if (!selectedId) return false;
-    const dish = slot.dishes.find(d => d.dishId === selectedId);
-    return dish && !isSoldOut(dish);
-  })
+const hasPendingSlots = computed(() =>
+  slotOptions.value.some(slot => !selections.value[slot.id]),
 );
 
 function selectDish(slotId, dish) {
@@ -143,7 +155,7 @@ function close() {
 }
 
 function confirm() {
-  if (!isValid.value) return;
+  if (!props.combo) return;
   emit('confirm', { ...selections.value });
   close();
 }

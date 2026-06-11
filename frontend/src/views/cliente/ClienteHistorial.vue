@@ -31,9 +31,23 @@
                 {{ formatDate(order.createdAt) }}
               </div>
             </div>
-            <v-chip :color="statusColor(order.status)" size="small" variant="flat" class="font-weight-bold">
-              {{ order.status }}
-            </v-chip>
+            <div class="d-flex align-center gap-2 flex-wrap justify-end">
+              <v-chip :color="statusColor(order.status)" size="small" variant="flat" class="font-weight-bold">
+                {{ order.status }}
+              </v-chip>
+              <v-btn
+                v-if="canClientCancelOrder(order.status)"
+                size="small"
+                variant="tonal"
+                color="error"
+                class="rounded-lg font-weight-bold"
+                prepend-icon="mdi-close-circle-outline"
+                :loading="cancelingId === order.id"
+                @click="openCancelDialog(order)"
+              >
+                Cancelar
+              </v-btn>
+            </div>
           </div>
         </div>
 
@@ -87,15 +101,55 @@
         </div>
       </v-card>
     </div>
+
+    <v-dialog v-model="cancelDialog.show" max-width="420" persistent>
+      <v-card class="rounded-xl overflow-hidden" color="surface-container-low">
+        <div class="bg-error pa-6 text-center">
+          <v-icon size="40" color="white" class="mb-2">mdi-close-circle-outline</v-icon>
+          <h3 class="font-headline text-h6 text-white font-weight-bold">Cancelar pedido</h3>
+        </div>
+        <v-card-text class="pa-6 text-center text-body-1">
+          ¿Cancelar el pedido <strong>#{{ cancelDialog.order?.id }}</strong>?
+          Esta acción no se puede deshacer.
+        </v-card-text>
+        <v-divider class="opacity-10" />
+        <v-card-actions class="pa-6">
+          <v-btn variant="text" class="rounded-xl font-weight-bold" :disabled="!!cancelingId" @click="cancelDialog.show = false">
+            Volver
+          </v-btn>
+          <v-spacer />
+          <v-btn
+            color="error"
+            variant="flat"
+            class="rounded-xl font-weight-bold px-6"
+            :loading="!!cancelingId"
+            @click="confirmCancel"
+          >
+            Cancelar pedido
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="4000" location="top">
+      <span class="font-weight-bold">{{ snackbar.text }}</span>
+      <template #actions>
+        <v-btn variant="text" icon="mdi-close" size="small" @click="snackbar.show = false" />
+      </template>
+    </v-snackbar>
   </v-container>
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useOrdersStore } from '../../stores/useOrdersStore';
+import { canClientCancelOrder } from '../../constants/orderStatus';
 import dishImage from '../../assets/silpancho.jpg';
 
 const ordersStore = useOrdersStore();
+const cancelDialog = ref({ show: false, order: null });
+const cancelingId = ref(null);
+const snackbar = ref({ show: false, text: '', color: 'success' });
 
 onMounted(async () => {
   try {
@@ -126,7 +180,29 @@ function statusColor(status) {
   switch (status) {
     case 'En preparación': return 'warning';
     case 'Entregado': return 'success';
+    case 'Cancelado': return 'error';
+    case 'Atrasado': return 'error';
     default: return 'primary';
+  }
+}
+
+function openCancelDialog(order) {
+  cancelDialog.value = { show: true, order };
+}
+
+async function confirmCancel() {
+  const order = cancelDialog.value.order;
+  if (!order) return;
+
+  cancelingId.value = order.id;
+  try {
+    await ordersStore.cancelOrder(order.id);
+    snackbar.value = { show: true, text: 'Pedido cancelado.', color: 'success' };
+    cancelDialog.value.show = false;
+  } catch (err) {
+    snackbar.value = { show: true, text: err.message || 'No se pudo cancelar el pedido.', color: 'error' };
+  } finally {
+    cancelingId.value = null;
   }
 }
 

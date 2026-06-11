@@ -57,6 +57,7 @@ const menuItems = computed(() => {
     return [
       { title: 'Panel de Control', icon: 'mdi-view-dashboard', to: '/admin' },
       { title: 'Pedidos', icon: 'mdi-receipt-text-outline', to: '/admin/orders' },
+      { title: 'Platillos', icon: 'mdi-food', to: '/admin/platillos' },
       { title: 'Menú', icon: 'mdi-silverware-variant', to: '/admin/menu' },
       { title: 'Analíticas', icon: 'mdi-chart-line', to: '/admin/analytics' },
       { title: 'Usuarios', icon: 'mdi-account-group', to: '/admin/usuarios' },

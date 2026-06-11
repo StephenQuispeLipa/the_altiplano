@@ -74,6 +74,8 @@ const menuItems = computed(() => {
       { title: 'Platillos', icon: 'mdi-food', to: '/admin/platillos' },
       { title: 'Menú', icon: 'mdi-silverware-variant', to: '/admin/menu' },
       { title: 'Analíticas', icon: 'mdi-chart-line', to: '/admin/analytics' },
+      { title: 'Usuarios', icon: 'mdi-account-group', to: '/admin/usuarios' },
+      { title: 'Log de acceso', icon: 'mdi-shield-key', to: '/admin/access-logs' },
     ];
   }
   if (authStore.currentRole === 'Camarero') {

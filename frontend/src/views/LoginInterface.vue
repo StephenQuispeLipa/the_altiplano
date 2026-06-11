@@ -84,6 +84,7 @@
               density="comfortable"
               class="custom-input rounded-lg"
               hide-details="auto"
+              :error-messages="credentialsError || undefined"
               :rules="[required()]"
             >
               <template #append-inner>
@@ -111,10 +112,6 @@
             <span class="text-white">Iniciar Sesión</span>
             <v-icon right color="white" class="ml-2">mdi-arrow-right</v-icon>
           </v-btn>
-
-          <v-alert v-if="authStore.error" type="error" variant="tonal" class="mt-4 rounded-lg" density="compact">
-            {{ authStore.error }}
-          </v-alert>
         </v-form>
 
         <div class="mt-12 pt-10 border-t-ghost text-center">
@@ -149,6 +146,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/useAuthStore';
 import { resetAppDataInitialized } from '../composables/useAppInit';
 import { required, email as emailRule, roleRequired } from '../utils/validationRules';
+import { isCaptchaRelatedError, isCredentialsError } from '../utils/authErrors';
 import CaptchaField from '../components/auth/CaptchaField.vue';
 import illimaniImg from '../assets/illimani.jpg';
 
@@ -158,16 +156,20 @@ const authStore = useAuthStore();
 
 const formRef = ref(null);
 const captchaRef = ref(null);
-const email = ref('admin@altiplanofamiliar.com');
-const password = ref('password123');
-const selectedRole = ref('Admin');
+const email = ref('');
+const password = ref('');
+const selectedRole = ref('Cliente');
 const roles = ['Admin', 'Camarero', 'Cliente'];
 const showPassword = ref(false);
 const rememberMe = ref(false);
+const credentialsError = ref('');
 
 const registeredSuccess = computed(() => route.query.registered === '1');
 
 const handleLogin = async () => {
+  credentialsError.value = '';
+  captchaRef.value?.clearServerError();
+
   const { valid } = await formRef.value.validate();
   if (!valid) return;
 
@@ -182,8 +184,18 @@ const handleLogin = async () => {
   if (result.success) {
     resetAppDataInitialized();
     router.push('/');
-  } else {
+    return;
+  }
+
+  const message = result.message || authStore.error || 'Error al iniciar sesión';
+
+  if (isCaptchaRelatedError(message)) {
+    captchaRef.value?.setServerError(message);
     captchaRef.value?.loadCaptcha();
+  } else if (isCredentialsError(message)) {
+    credentialsError.value = message;
+  } else {
+    credentialsError.value = message;
   }
 };
 </script>

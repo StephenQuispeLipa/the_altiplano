@@ -11,7 +11,9 @@ export const getDatabaseConfig = (
   password: configService.get<string>('DATABASE_PASSWORD', ''),
   database: configService.get<string>('DATABASE_NAME', 'the_altiplano_db'),
   autoLoadEntities: true,
-  synchronize: configService.get<string>('NODE_ENV') !== 'production',
+  synchronize:
+    configService.get<string>('DATABASE_SYNCHRONIZE') === 'true'
+    || configService.get<string>('NODE_ENV') !== 'production',
   logging: configService.get<string>('NODE_ENV') === 'development',
 });
 

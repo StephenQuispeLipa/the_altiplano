@@ -1,4 +1,4 @@
-import { Request } from 'express';
+import type { Request } from 'express';
 import { UAParser } from 'ua-parser-js';
 
 export interface ClientMeta {
@@ -7,16 +7,37 @@ export interface ClientMeta {
   userAgent: string;
 }
 
+function normalizeIp(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+
+  let ip = raw.trim();
+  if (!ip) return null;
+
+  if (ip.startsWith('::ffff:')) {
+    ip = ip.slice(7);
+  }
+
+  if (ip === '::1') {
+    return '127.0.0.1';
+  }
+
+  return ip;
+}
+
+function firstForwardedIp(forwarded: string | string[] | undefined): string | null {
+  if (!forwarded) return null;
+
+  const value = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  const first = value.split(',')[0]?.trim();
+  return normalizeIp(first);
+}
+
 export function getClientMeta(req: Request): ClientMeta {
-  const forwarded = req.headers['x-forwarded-for'];
-  const ip =
-    (typeof forwarded === 'string'
-      ? forwarded.split(',')[0]?.trim()
-      : Array.isArray(forwarded)
-        ? forwarded[0]
-        : null) ||
-    req.ip ||
-    req.socket?.remoteAddress ||
+  const ipAddress =
+    firstForwardedIp(req.headers['x-forwarded-for']) ||
+    normalizeIp(typeof req.headers['x-real-ip'] === 'string' ? req.headers['x-real-ip'] : undefined) ||
+    normalizeIp(req.ip) ||
+    normalizeIp(req.socket?.remoteAddress) ||
     'unknown';
 
   const userAgent = req.headers['user-agent'] ?? '';
@@ -25,7 +46,7 @@ export function getClientMeta(req: Request): ClientMeta {
   const browserLabel = [browser.name, browser.version].filter(Boolean).join(' ') || 'Desconocido';
 
   return {
-    ipAddress: ip,
+    ipAddress,
     browser: browserLabel,
     userAgent,
   };

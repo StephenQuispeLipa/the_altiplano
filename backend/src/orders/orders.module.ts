@@ -7,6 +7,7 @@ import { OrderItem } from './entities/order-item.entity';
 import { MenuEntry } from '../menu/entities/menu-entry.entity';
 import { Dish } from '../dishes/entities/dish.entity';
 import { Combo } from '../combos/entities/combo.entity';
+import { ComboSlot } from '../combos/entities/combo-slot.entity';
 import { Client } from '../clients/entities/client.entity';
 import { Staff } from '../staff/entities/staff.entity';
 
@@ -18,6 +19,7 @@ import { Staff } from '../staff/entities/staff.entity';
       MenuEntry,
       Dish,
       Combo,
+      ComboSlot,
       Client,
       Staff,
     ]),

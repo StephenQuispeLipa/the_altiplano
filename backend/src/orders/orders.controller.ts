@@ -79,6 +79,17 @@ export class OrdersController {
     return this.ordersService.updateStatus(id, dto);
   }
 
+  @Patch(':id/cancel')
+  @Roles(AppRole.Cliente)
+  @ApiOperation({ summary: 'Cancelar pedido (cliente)' })
+  @ApiOkResponse({ type: OrderResponseDto })
+  cancelByClient(
+    @Param('id') id: string,
+    @Req() req: { user: JwtPayload },
+  ): Promise<OrderResponseDto> {
+    return this.ordersService.cancelByClient(id, req.user);
+  }
+
   @Patch(':id/paid')
   @Roles(AppRole.Admin, AppRole.Camarero)
   @ApiOperation({ summary: 'Actualizar estado de pago' })

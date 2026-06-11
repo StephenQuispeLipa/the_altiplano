@@ -33,3 +33,7 @@ export function updateOrderPaid(id, isPaid) {
 export function deleteOrder(id) {
   return api.delete(`/orders/${id}`);
 }
+
+export function cancelOrder(id) {
+  return api.patch(`/orders/${id}/cancel`, {});
+}

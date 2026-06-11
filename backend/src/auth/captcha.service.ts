@@ -136,18 +136,17 @@ export class CaptchaService {
 
     const valid = await bcrypt.compare(normalized, challenge.answerHash);
 
-    await this.captchaRepo.delete({ id: captchaId });
-
-
-
     if (!valid) {
-
+      await this.captchaRepo.delete({ id: captchaId });
       throw new UnauthorizedException('Texto CAPTCHA incorrecto.');
-
     }
-
   }
 
+  async consume(captchaId: string): Promise<void> {
+    if (captchaId) {
+      await this.captchaRepo.delete({ id: captchaId });
+    }
+  }
 }
 
 

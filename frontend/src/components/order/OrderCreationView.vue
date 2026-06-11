@@ -187,7 +187,7 @@
                 class="mb-2"
               >
                 <template #item="{ props, item }">
-                  <v-list-item v-bind="props" :subtitle="item.raw.phone" />
+                  <v-list-item v-bind="props" :subtitle="item?.phone ?? ''" />
                 </template>
               </v-autocomplete>
 
